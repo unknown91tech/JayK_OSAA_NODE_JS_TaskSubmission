@@ -46,8 +46,8 @@ A robust, production-ready authentication system built with Node.js, Express, Po
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd secure-auth-system
+   git clone (https://github.com/unknown91tech/JayK_OSAA_NODE_JS_TaskSubmission.git)
+   cd auth-system
    ```
 
 2. **Install dependencies**
@@ -281,6 +281,10 @@ npm run rotate-logs
 ### Health Check
 ```bash
 curl http://localhost:3000/health
+```
+### Swagger Check
+```bash
+curl http://localhost:3000/api-docs
 ```
 
 ### Logs
