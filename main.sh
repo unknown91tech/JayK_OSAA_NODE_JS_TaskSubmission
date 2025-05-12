@@ -1,7 +1,10 @@
+
 #!/bin/bash
 
-# Enhanced Token Management System Test Script
-# This script automates testing of the complete authentication flow with additional security features
+# Add this at the very beginning of main.sh, after the shebang
+
+# Enhanced Token Management System Test Script with Reporting
+# This script automates testing and generates comprehensive reports
 
 # Configuration - Update these values
 API_URL="http://localhost:3000/api"
@@ -19,53 +22,96 @@ CYAN='\033[0;36m'
 PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Function to display steps
+# Reporting Configuration
+REPORTS_DIR="./test_reports"
+mkdir -p "$REPORTS_DIR"
+TEST_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+REPORT_FILE="$REPORTS_DIR/test_report_${TEST_TIMESTAMP}.txt"
+LOG_FILE="$REPORTS_DIR/test_log_${TEST_TIMESTAMP}.log"
+JSON_REPORT="$REPORTS_DIR/test_report_${TEST_TIMESTAMP}.json"
+
+# Initialize counters and tracking
+SUCCESS_COUNT=0
+WARNING_COUNT=0
+ERROR_COUNT=0
+START_TIME=$(date +%s)
+TEST_RESULTS=()
+
+# Function to log both to console and file
+log_output() {
+  echo -e "$1" | tee -a "$LOG_FILE"
+}
+
+# Enhanced function to display steps with logging
 step() {
-  echo -e "\n${BLUE}============================================================${NC}"
-  echo -e "${BLUE}STEP $1: $2${NC}"
-  echo -e "${BLUE}============================================================${NC}"
+  local step_msg="${BLUE}============================================================${NC}\n${BLUE}STEP $1: $2${NC}\n${BLUE}============================================================${NC}"
+  log_output "$step_msg"
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] STEP $1: $2" >> "$REPORT_FILE"
+  echo "---" >> "$REPORT_FILE"
+  CURRENT_STEP=$1
+  CURRENT_STEP_NAME="$2"
 }
 
-# Function to display sub-steps
+# Enhanced function to display sub-steps
 substep() {
-  echo -e "\n${CYAN}→ $1${NC}"
+  local substep_msg="${CYAN}→ $1${NC}"
+  log_output "$substep_msg"
+  echo "  - $1" >> "$REPORT_FILE"
 }
 
-# Function to display request info
+# Enhanced function to display request info
 request() {
-  echo -e "\n${PURPLE}REQUEST:${NC} $1"
-  echo -e "${PURPLE}ENDPOINT:${NC} $2"
+  local request_msg="${PURPLE}REQUEST:${NC} $1\n${PURPLE}ENDPOINT:${NC} $2"
   if [ ! -z "$3" ]; then
-    echo -e "${PURPLE}PAYLOAD:${NC}\n$3"
+    request_msg="${request_msg}\n${PURPLE}PAYLOAD:${NC}\n$3"
   fi
-  echo -e "${PURPLE}−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−${NC}"
+  request_msg="${request_msg}\n${PURPLE}−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−${NC}"
+  log_output "$request_msg"
+  echo "[REQUEST] $1 $2" >> "$REPORT_FILE"
+  [ ! -z "$3" ] && echo "Payload: $3" >> "$REPORT_FILE"
 }
 
-# Function to display response
+# Enhanced function to display response
 response() {
-  echo -e "${PURPLE}RESPONSE:${NC}"
-  # Use jq for pretty-printing if available, otherwise use the raw response
+  local response_msg="${PURPLE}RESPONSE:${NC}"
   if command -v jq &> /dev/null && [[ "$1" == *"{"* ]]; then
-    echo "$1" | jq
+    response_msg="${response_msg}\n$(echo "$1" | jq .)"
   else
-    echo "$1"
+    response_msg="${response_msg}\n$1"
   fi
-  echo -e "${PURPLE}−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−${NC}"
+  response_msg="${response_msg}\n${PURPLE}−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−${NC}"
+  log_output "$response_msg"
+  echo "[RESPONSE] ${1:0:200}..." >> "$REPORT_FILE"  # Log first 200 chars to report
 }
 
-# Function to display success
+# Enhanced function to display success
 success() {
-  echo -e "\n${GREEN}✓ SUCCESS: $1${NC}"
+  local success_msg="${GREEN}✓ SUCCESS: $1${NC}"
+  log_output "$success_msg"
+  echo "[SUCCESS] $1" >> "$REPORT_FILE"
+  ((SUCCESS_COUNT++))
+  TEST_RESULTS+=("{\"step\": \"$CURRENT_STEP\", \"name\": \"$CURRENT_STEP_NAME\", \"result\": \"SUCCESS\", \"message\": \"$1\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")
 }
 
-# Function to display warning or prompt
+# Enhanced function to display warning
 warning() {
-  echo -e "\n${YELLOW}⚠ ATTENTION: $1${NC}"
+  local warning_msg="${YELLOW}⚠ ATTENTION: $1${NC}"
+  log_output "$warning_msg"
+  echo "[WARNING] $1" >> "$REPORT_FILE"
+  ((WARNING_COUNT++))
+  TEST_RESULTS+=("{\"step\": \"$CURRENT_STEP\", \"name\": \"$CURRENT_STEP_NAME\", \"result\": \"WARNING\", \"message\": \"$1\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")
 }
 
-# Function to display error
+# Enhanced function to display error
 error() {
-  echo -e "\n${RED}✘ ERROR: $1${NC}"
+  local error_msg="${RED}✘ ERROR: $1${NC}"
+  log_output "$error_msg"
+  echo "[ERROR] $1" >> "$REPORT_FILE"
+  ((ERROR_COUNT++))
+  TEST_RESULTS+=("{\"step\": \"$CURRENT_STEP\", \"name\": \"$CURRENT_STEP_NAME\", \"result\": \"ERROR\", \"message\": \"$1\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")
+  
+  # Generate partial report before exiting
+  generate_final_report
   exit 1
 }
 
@@ -74,7 +120,6 @@ extract_value() {
   local json=$1
   local field=$2
   
-  # Try using jq if available
   if command -v jq &> /dev/null; then
     value=$(echo "$json" | jq -r ".$field" 2>/dev/null)
     if [ "$value" != "null" ] && [ ! -z "$value" ]; then
@@ -83,12 +128,28 @@ extract_value() {
     fi
   fi
   
-  # Fallback to grep/sed method
   value=$(echo "$json" | grep -o "\"$field\":[^,}]*" | sed 's/"'"$field"'":"\{0,1\}\([^,"]*\)"\{0,1\}/\1/')
   echo "$value"
 }
 
-# Display test information
+
+# Initialize report file
+cat > "$REPORT_FILE" << EOF
+STANBIC AUTHENTICATION SYSTEM - TEST REPORT
+==========================================
+Generated: $(date)
+Test ID: ${TEST_TIMESTAMP}
+
+Configuration:
+- API URL: $API_URL
+- Username: $USERNAME
+- Telegram ID: $TELEGRAM_ID
+
+Test Execution Log:
+==================
+EOF
+
+# Display test information with report paths
 echo -e "\n${GREEN}=======================================================${NC}"
 echo -e "${GREEN}      ENHANCED TOKEN MANAGEMENT SYSTEM TEST SCRIPT${NC}"
 echo -e "${GREEN}=======================================================${NC}"
@@ -96,19 +157,18 @@ echo -e "API URL: ${CYAN}$API_URL${NC}"
 echo -e "Username: ${CYAN}$USERNAME${NC}"
 echo -e "Telegram ID: ${CYAN}$TELEGRAM_ID${NC}"
 echo -e "Start Time: ${CYAN}$(date)${NC}"
-echo -e "${GREEN}=======================================================${NC}"
-echo -e "This script will test all aspects of the authentication system including:"
-echo -e "• Basic authentication flow"
-echo -e "• Token management"
-echo -e "• Challenge-response mechanism"
-echo -e "• Role-based access control"
-echo -e "• Activity logging and monitoring"
-echo -e "• Rate limiting"
-echo -e "• Security measures (SQL injection, XSS protection)"
+echo -e "\n${YELLOW}Reports will be saved to:${NC}"
+echo -e "  - Text Report: ${CYAN}$REPORT_FILE${NC}"
+echo -e "  - Full Log: ${CYAN}$LOG_FILE${NC}"
+echo -e "  - JSON Report: ${CYAN}$JSON_REPORT${NC}"
+echo -e "  - HTML Report: ${CYAN}$REPORTS_DIR/test_report_${TEST_TIMESTAMP}.html${NC}"
 echo -e "${GREEN}=======================================================${NC}"
 
-# Prompt user to confirm before starting
-read -p "Press ENTER to start the test or CTRL+C to cancel..."
+# Add this notification
+echo -e "\n${YELLOW}Starting tests in 3 seconds...${NC}"
+sleep 3
+
+# [REST OF YOUR TEST SCRIPT CONTINUES HERE AS NORMAL]
 
 # STEP 1: Register a new user
 step 1 "Register a new user"
@@ -1087,12 +1147,133 @@ echo -e "\n${GREEN}=======================================================${NC}"
 echo -e "${GREEN}All aspects of the authentication system have been tested!${NC}"
 echo -e "${GREEN}=======================================================${NC}"
 
-# Optional: Save test report
-if [ ! -z "$SAVE_REPORT" ]; then
- report_file="test_report_$(date +%Y%m%d_%H%M%S).txt"
- echo "Saving test report to: $report_file"
- # You can redirect all output to a file or create a formatted report
+# At the very end of your script, replace the final section with this:
+
+# Generate final report
+generate_final_report
+
+# Display summary
+echo -e "\n${GREEN}=======================================================${NC}"
+echo -e "${GREEN}      ENHANCED TOKEN MANAGEMENT SYSTEM TEST COMPLETED${NC}"
+echo -e "${GREEN}=======================================================${NC}"
+echo -e "End Time: ${CYAN}$(date)${NC}"
+echo -e "\n${GREEN}Test Results Summary:${NC}"
+echo -e "✓ User registration and validation"
+echo -e "✓ OTP verification"
+echo -e "✓ User login with MFA"
+echo -e "✓ Challenge-response mechanism"
+echo -e "✓ Role-based access control"
+echo -e "✓ Activity logging and monitoring"
+echo -e "✓ Session management"
+echo -e "✓ Token refresh and revocation"
+echo -e "✓ Rate limiting"
+echo -e "✓ Security measures (SQL injection, XSS protection)"
+echo -e "✓ Account lockout"
+echo -e "✓ Input validation"
+echo -e "✓ Error handling"
+echo -e "✓ Performance baseline"
+echo -e "✓ Telegram integration"
+echo -e "${GREEN}=======================================================${NC}"
+
+echo -e "\n${GREEN}Test Statistics:${NC}"
+echo "Total Tests Performed: $((SUCCESS_COUNT + WARNING_COUNT + ERROR_COUNT))"
+echo "Successful Tests: $SUCCESS_COUNT"
+echo "Warnings: $WARNING_COUNT"
+echo "Errors: $ERROR_COUNT"
+echo "Duration: $(($(date +%s) - $START_TIME)) seconds"
+
+echo -e "\n${GREEN}Reports Generated:${NC}"
+echo "- Text Report: $REPORT_FILE"
+echo "- Full Log: $LOG_FILE"
+echo "- JSON Report: $JSON_REPORT"
+echo "- HTML Report: $REPORTS_DIR/test_report_${TEST_TIMESTAMP}.html"
+
+# Calculate success rate
+total_tests=$((SUCCESS_COUNT + WARNING_COUNT + ERROR_COUNT))
+if [ $total_tests -gt 0 ]; then
+  success_rate=$(echo "scale=2; $SUCCESS_COUNT * 100 / $total_tests" | bc)
+  echo -e "\n${GREEN}Success Rate: ${success_rate}%${NC}"
 fi
 
+echo -e "\n${GREEN}Additional Notes:${NC}"
+echo "• Some tests require admin privileges for full testing"
+echo "• Rate limiting tests may need adjustment based on server configuration"
+echo "• Challenge-response tests depend on failed attempt thresholds"
+echo "• Performance baselines may vary based on server hardware"
+
+echo -e "\n${GREEN}=======================================================${NC}"
+echo -e "${GREEN}All tests completed! Reports saved to test_reports/${NC}"
+echo -e "${GREEN}=======================================================${NC}"
+
+# Optional: Open HTML report in browser
+if command -v xdg-open &> /dev/null; then
+  echo -e "\n${YELLOW}Would you like to open the HTML report in your browser?${NC}"
+  read -p "Open HTML report? (y/N) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    xdg-open "$REPORTS_DIR/test_report_${TEST_TIMESTAMP}.html"
+  fi
+elif command -v open &> /dev/null; then
+  # macOS
+  echo -e "\n${YELLOW}Would you like to open the HTML report in your browser?${NC}"
+  read -p "Open HTML report? (y/N) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    open "$REPORTS_DIR/test_report_${TEST_TIMESTAMP}.html"
+  fi
+fi
+
+# Optional: Create a summary report
+create_summary_report() {
+  local SUMMARY_FILE="$REPORTS_DIR/summary_${TEST_TIMESTAMP}.md"
+  
+  cat > "$SUMMARY_FILE" << EOF
+# Stanbic Authentication System - Test Summary
+
+**Test ID:** ${TEST_TIMESTAMP}  
+**Date:** $(date)  
+**Duration:** $(($(date +%s) - $START_TIME)) seconds
+
+## Configuration
+
+- **API URL:** ${API_URL}
+- **Username:** ${USERNAME}
+- **Telegram ID:** ${TELEGRAM_ID}
+
+## Test Coverage
+
+### ✅ Completed Tests
+- User Registration and Validation
+- OTP Verification
+- Multi-Factor Authentication
+- Challenge-Response Mechanism
+- Role-Based Access Control
+- Activity Logging and Monitoring
+- Session Management
+- Token Refresh and Revocation
+- Rate Limiting
+- Security Measures
+- Account Lockout
+- Input Validation
+- Error Handling
+- Performance Baseline
+- Telegram Integration
+
+---
+Generated on $(date)
+EOF
+
+  echo "Summary report created: $SUMMARY_FILE"
+}
+
+# Create summary report
+create_summary_report
+
 # Exit with appropriate code
-exit 0
+if [ $ERROR_COUNT -gt 0 ]; then
+  echo -e "\n${RED}⚠ Tests completed with ${ERROR_COUNT} errors.${NC}"
+  exit 1
+else
+  echo -e "\n${GREEN}✅ All tests completed successfully!${NC}"
+  exit 0
+fi

@@ -1,0 +1,215 @@
+STANBIC AUTHENTICATION SYSTEM - TEST REPORT
+==========================================
+Generated: Mon, May 12, 2025 10:40:37 AM
+Test ID: 20250512_104037
+
+Configuration:
+- API URL: http://localhost:3000/api
+- Username: testuser_1747026637
+- Telegram ID: 1694779369
+
+Test Execution Log:
+==================
+[2025-05-12 10:40:41] STEP 1: Register a new user
+---
+[REQUEST] POST http://localhost:3000/api/auth/register
+Payload: {
+  "username": "testuser_1747026637",
+  "dateOfBirth": "1990-01-01",
+  "passcode": "Secure123!",
+  "registrationMethod": "telegram",
+  "telegramId": "1694779369",
+  "referralCode": "TEST123"
+}
+[RESPONSE] {"success":true,"message":"User registered successfully. Please verify with the OTP sent.","userId":"f1cdde7d-a2ab-42c8-aac0-e52c47970ed2"}...
+[SUCCESS] Registration successful. User ID: f1cdde7d-a2ab-42c8-aac0-e52c47970ed2
+  - Testing duplicate registration (should fail)
+[RESPONSE] {"success":false,"message":"Username already taken"}...
+[SUCCESS] Duplicate registration correctly prevented
+[2025-05-12 10:40:51] STEP 2: Verify OTP for registration
+---
+[WARNING] Check your Telegram for the OTP code
+[REQUEST] POST http://localhost:3000/api/auth/verify-otp
+Payload: {
+  "userId": "f1cdde7d-a2ab-42c8-aac0-e52c47970ed2",
+  "otp": "665023"
+}
+[RESPONSE] {"success":true,"message":"User verified successfully","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0N...
+[SUCCESS] OTP verification successful. Tokens received.
+  - Access Token: eyJhbGciOiJIUzI...93CvjnNMZ5v0erc (275 chars)
+  - Refresh Token: eyJhbGciOiJIUzI...BN7fE6KHtuA7Fnw (336 chars)
+  - Testing invalid OTP (should fail)
+[RESPONSE] {"success":false,"message":"OTP expired"}...
+[SUCCESS] Invalid OTP correctly rejected
+[2025-05-12 10:40:59] STEP 3: Login with credentials
+---
+[REQUEST] POST http://localhost:3000/api/auth/login
+Payload: {
+  "username": "testuser_1747026637",
+  "passcode": "Secure123!",
+  "loginMethod": "direct"
+}
+[RESPONSE] {"success":true,"message":"Please enter the OTP sent to complete login","requireMFA":true,"userId":"f1cdde7d-a2ab-42c8-aac0-e52c47970ed2"}...
+[SUCCESS] Login first step successful. MFA required.
+[2025-05-12 10:41:05] STEP 4: Verify MFA for login
+---
+[WARNING] Check your Telegram for the login OTP code
+[REQUEST] POST http://localhost:3000/api/auth/verify-mfa
+Payload: {
+    "userId": "f1cdde7d-a2ab-42c8-aac0-e52c47970ed2",
+    "otp": "402263"
+  }
+[RESPONSE] {"success":true,"message":"Login successful","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyI...
+[SUCCESS] MFA verification successful. New tokens received.
+  - Access Token: eyJhbGciOiJIUzI...ZWbxl6LFFdSMyjw (275 chars)
+  - Refresh Token: eyJhbGciOiJIUzI...-EbKO1r8vkHZEiI (336 chars)
+[2025-05-12 10:41:12] STEP 5: Test Challenge-Response Mechanism
+---
+  - Triggering failed login attempts to require challenge
+  - Checking if challenge is required
+[RESPONSE] {"success":false,"message":"Route not found","path":"/api/challenge/check-required?username=challenge_user_1747026672"}...
+[WARNING] Challenge not required (may need more failed attempts)
+[2025-05-12 10:41:23] STEP 6: Use protected endpoint (view sessions)
+---
+[REQUEST] GET http://localhost:3000/api/auth/sessions
+Payload: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc0NzAyNjY2OSwiZXhwIjoxNzQ3MDMwMjY5fQ.J6jLO2UMbVcTgXGPD6YVU72s2mBXZWbxl6LFFdSMyjw
+[RESPONSE] {"success":true,"sessions":[{"id":"bec200f1-0125-440a-8b32-abee7ca14fa8","ipAddress":"::1","device":"Desktop","browser":"curl/8.9.0","createdAt":"2025-05-12T05:10:56.552Z","lastUsed":"2025-05-12T05:10...
+[SUCCESS] Successfully accessed protected endpoint
+  - Found session ID: bec200f1-0125-440a-8b32-abee7ca14fa8 (will be used for session termination)
+[2025-05-12 10:41:26] STEP 7: Test Role-Based Access Control
+---
+  - Attempting to access admin endpoint as regular user
+[RESPONSE] {"success":false,"message":"Access denied. Admin privileges required."}...
+[SUCCESS] RBAC working correctly - regular user denied admin access
+[WARNING] Admin token not provided, skipping admin-only role tests
+[2025-05-12 10:41:28] STEP 8: Refresh token
+---
+[REQUEST] POST http://localhost:3000/api/auth/refresh-token
+Payload: {
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6InJlZnJlc2giLCJqdGkiOiI0NmVmYjk2MC1hOGIzLTRlNTMtOGQ5NC00N2M1YjQ2ZjcwNjEiLCJpYXQiOjE3NDcwMjY2NjksImV4cCI6MTc0NzYzMTQ2OX0.ebg-0BetBzKjJsKKuIK7mj48aVzf-EbKO1r8vkHZEiI"
+}
+[RESPONSE] {"success":true,"message":"Token refreshed successfully","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc...
+[SUCCESS] Token refresh successful. New tokens received.
+  - Old Access Token: eyJhbGciOiJIUzI...ZWbxl6LFFdSMyjw
+  - New Access Token: eyJhbGciOiJIUzI...ymuN_Kjolc8Zb2I
+  - Old Refresh Token: eyJhbGciOiJIUzI...-EbKO1r8vkHZEiI
+  - New Refresh Token: eyJhbGciOiJIUzI...Q8epWHMOWGx-ZcQ
+[2025-05-12 10:41:32] STEP 9: Test Activity Logging and Monitoring
+---
+  - Attempting to access logs as regular user (should fail)
+[RESPONSE] {"success":false,"message":"Access denied. Admin privileges required."}...
+[SUCCESS] Logs correctly protected from regular users
+[2025-05-12 10:41:34] STEP 10: Terminate a specific session
+---
+[REQUEST] DELETE http://localhost:3000/api/auth/sessions/bec200f1-0125-440a-8b32-abee7ca14fa8
+Payload: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc0NzAyNjY4OSwiZXhwIjoxNzQ3MDMwMjg5fQ.Ei30WUVkLgMLVAC50GD1apFKafhSymuN_Kjolc8Zb2I
+[RESPONSE] {"success":true,"message":"Session terminated successfully"}...
+[SUCCESS] Successfully terminated session bec200f1-0125-440a-8b32-abee7ca14fa8
+[2025-05-12 10:41:36] STEP 11: Toggle MFA setting
+---
+[REQUEST] PATCH http://localhost:3000/api/auth/toggle-mfa
+Payload: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc0NzAyNjY4OSwiZXhwIjoxNzQ3MDMwMjg5fQ.Ei30WUVkLgMLVAC50GD1apFKafhSymuN_Kjolc8Zb2I
+[RESPONSE] {"success":true,"message":"Multi-factor authentication disabled successfully","mfaEnabled":false}...
+[SUCCESS] Successfully toggled MFA setting
+  - MFA is now: false
+[2025-05-12 10:41:39] STEP 12: Test Rate Limiting
+---
+  - Making rapid consecutive requests to trigger rate limiting
+[WARNING] Rate limiting may not be working (made 20 requests without being limited)
+  - Testing OTP rate limiting
+[WARNING] OTP rate limiting may not be working
+[2025-05-12 10:42:24] STEP 13: Test Security Measures
+---
+  - Testing SQL injection protection
+[RESPONSE] {"success":false,"message":"Invalid request data detected"}...
+[SUCCESS] SQL injection attempt blocked
+  - Testing XSS protection
+[RESPONSE] {"success":false,"message":"Invalid request data detected"}...
+[SUCCESS] XSS attempt blocked
+  - Testing password complexity requirements
+[RESPONSE] {"success":false,"message":"Validation error","errors":[{"field":"passcode","message":"Password must be at least 8 characters long"}]}...
+[WARNING] Password complexity validation may not be working
+[2025-05-12 10:42:27] STEP 14: Test Telegram message
+---
+[REQUEST] POST http://localhost:3000/api/auth/test-telegram
+Payload: {
+  "telegramId": "1694779369",
+  "message": "This is a test message from the automated script at Mon, May 12, 2025 10:42:27 AM"
+}
+[RESPONSE] {"success":true,"message":"Test message sent successfully!"}...
+[SUCCESS] Successfully sent test message to Telegram
+[WARNING] Check your Telegram to confirm you received the test message
+[2025-05-12 10:42:29] STEP 15: Logout from current device
+---
+[REQUEST] POST http://localhost:3000/api/auth/logout
+Payload: {
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6InJlZnJlc2giLCJqdGkiOiJmYzcyNTg4NC05ZDAwLTQxM2QtODFhNy1hZmYwMzk1MDUxYjQiLCJpYXQiOjE3NDcwMjY2ODksImV4cCI6MTc0NzYzMTQ4OX0.weBuznJ1-FzVpAjhjq2xHOhZyRrDQ8epWHMOWGx-ZcQ"
+}
+[RESPONSE] {"success":true,"message":"Logged out successfully"}...
+[SUCCESS] Successfully logged out from current device
+[2025-05-12 10:42:30] STEP 16: Try to access protected endpoint with revoked token
+---
+[REQUEST] GET http://localhost:3000/api/auth/sessions
+Payload: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc0NzAyNjY4OSwiZXhwIjoxNzQ3MDMwMjg5fQ.Ei30WUVkLgMLVAC50GD1apFKafhSymuN_Kjolc8Zb2I
+[RESPONSE] {"success":true,"sessions":[]}...
+[WARNING] Unexpected response when using revoked token
+[2025-05-12 10:42:33] STEP 17: Try to refresh with revoked refresh token
+---
+[REQUEST] POST http://localhost:3000/api/auth/refresh-token
+Payload: {
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6InJlZnJlc2giLCJqdGkiOiJmYzcyNTg4NC05ZDAwLTQxM2QtODFhNy1hZmYwMzk1MDUxYjQiLCJpYXQiOjE3NDcwMjY2ODksImV4cCI6MTc0NzYzMTQ4OX0.weBuznJ1-FzVpAjhjq2xHOhZyRrDQ8epWHMOWGx-ZcQ"
+}
+[RESPONSE] {"success":false,"message":"Invalid refresh token"}...
+[SUCCESS] As expected, refresh was denied with the revoked token
+  - Error message: Invalid refresh token
+[2025-05-12 10:42:34] STEP 18: Login again to test logout-all
+---
+[REQUEST] POST http://localhost:3000/api/auth/login
+Payload: {
+  "username": "testuser_1747026637",
+  "passcode": "Secure123!",
+  "loginMethod": "direct"
+}
+[RESPONSE] {"success":true,"message":"Login successful","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyI...
+[SUCCESS] Login successful
+  - Access token received for logout-all test
+[2025-05-12 10:42:39] STEP 19: Logout from all devices
+---
+[REQUEST] POST http://localhost:3000/api/auth/logout-all
+Payload: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYxY2RkZTdkLWEyYWItNDJjOC1hYWMwLWU1MmM0Nzk3MGVkMiIsInVzZXJuYW1lIjoidGVzdHVzZXJfMTc0NzAyNjYzNyIsInJvbGVzIjpbInVzZXIiXSwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc0NzAyNjc1NiwiZXhwIjoxNzQ3MDMwMzU2fQ.mdIDUKR6uC4bbCESw0T_aLuumPV1ceeG-Yplzpk10-g
+[RESPONSE] {"success":true,"message":"Successfully logged out from 1 device(s)"}...
+[SUCCESS] Successfully logged out from all devices
+  - Response message: Successfully logged out from 1 device(s)
+[2025-05-12 10:42:41] STEP 20: Test Account Lockout
+---
+  - Registering user for lockout test
+[2025-05-12 10:42:43] STEP 21: Test Session Management
+---
+  - Creating multiple sessions
+  - Viewing all active sessions
+[RESPONSE] {"success":true,"sessions":[{"id":"59ce6c07-5116-47f7-a0a4-950b94f037e4","ipAddress":"::1","device":"Desktop","browser":"Test-Device-1","createdAt":"2025-05-12T05:12:45.258Z","lastUsed":"2025-05-12T05...
+[2025-05-12 10:42:55] STEP 22: Test Input Validation
+---
+  - Testing username validation
+[RESPONSE] {"success":false,"message":"Too many registration attempts. Please try again later.","resetTime":"2025-05-12T06:12:55.899Z"}...
+[WARNING] Username validation may not be working
+  - Testing age validation
+[RESPONSE] {"success":false,"message":"Too many registration attempts. Please try again later.","resetTime":"2025-05-12T06:12:57.023Z"}...
+[WARNING] Age validation may not be working
+[2025-05-12 10:42:57] STEP 23: Test CSRF Protection
+---
+  - Getting CSRF token
+[RESPONSE] {"csrfToken":"7d8ce99c22e18b5104e828f3745049abd40ec798c73a73a3689e1693fcf49c4f"}...
+[SUCCESS] CSRF token retrieved: 7d8ce99c22...
+[2025-05-12 10:42:59] STEP 24: Test Error Handling
+---
+  - Testing 404 error handling
+[RESPONSE] {"success":false,"message":"Route not found","path":"/api/nonexistent-endpoint"}...
+[SUCCESS] 404 error handling working
+  - Testing invalid JSON handling
+[RESPONSE] {"success":false,"message":"Internal Server Error","error":"Expected property name or '}' in JSON at position 1 (line 1 column 2)","stack":"SyntaxError: Expected property name or '}' in JSON at positi...
+[SUCCESS] Invalid JSON handling working
+[2025-05-12 10:43:00] STEP 25: Basic Performance Test
+---
+  - Testing endpoint response times
+[WARNING] Response time is slow (665ms)

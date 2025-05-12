@@ -513,80 +513,8 @@ echo -e "✓ Error handling validation"
 echo -e "${GREEN}=======================================================${NC}"
 echo -e "All aspects of the token management system have been tested!"
 echo -e "${GREEN}=======================================================${NC}": $invalid_response"
-if [[ "$invalid_response" == *"success\":false"* ]]; then
-  success "As expected, access was denied with the revoked token"
-else
-  warning "Unexpected response when using revoked token"
-fi
 
-# STEP 12: Attempt to refresh with now-invalid refresh token
-step 12 "Try to refresh with revoked refresh token"
-invalid_refresh_response=$(curl -s -X POST "$API_URL/auth/refresh-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refreshToken": "'"$refresh_token"'"
-  }')
 
-echo "Response: $invalid_refresh_response"
-if [[ "$invalid_refresh_response" == *"success\":false"* ]]; then
-  success "As expected, refresh was denied with the revoked token"
-else
-  warning "Unexpected response when using revoked refresh token"
-fi
-
-# STEP 13: Login again to test logout from all devices
-step 13 "Login again to test logout-all"
-login_again_response=$(curl -s -X POST "$API_URL/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "'"$USERNAME"'",
-    "passcode": "'"$PASSCODE"'",
-    "loginMethod": "direct"
-  }')
-
-echo "Response: $login_again_response"
-
-# Handle MFA if required
-require_mfa=$(extract_value "$login_again_response" "requireMFA")
-login_user_id=$(extract_value "$login_again_response" "userId")
-
-if [ "$require_mfa" = "true" ]; then
-  warning "Check your Telegram for the login OTP code"
-  read -p "Enter the OTP received on Telegram: " login_otp
-
-  mfa_again_response=$(curl -s -X POST "$API_URL/auth/verify-mfa" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "userId": "'"$login_user_id"'",
-      "otp": "'"$login_otp"'"
-    }')
-
-  echo "Response: $mfa_again_response"
-  final_access_token=$(extract_value "$mfa_again_response" "accessToken")
-else
-  final_access_token=$(extract_value "$login_again_response" "accessToken")
-fi
-
-if [ -z "$final_access_token" ]; then
-  warning "Could not log in again, skipping logout-all test"
-else
-  success "Logged in successfully again"
-  
-  # STEP 14: Logout from all devices
-  step 14 "Logout from all devices"
-  logout_all_response=$(curl -s -X POST "$API_URL/auth/logout-all" \
-    -H "Authorization: Bearer $final_access_token")
-
-  echo "Response: $logout_all_response"
-  if [[ "$logout_all_response" == *"success\":true"* ]]; then
-    success "Successfully logged out from all devices"
-  else
-    warning "Failed to logout from all devices"
-  fi
-fi
-
-echo -e "\n${GREEN}=== Token Management System Test Complete ===${NC}"
-echo "You have successfully tested all aspects of the token management system.": $invalid_refresh_response"
 if [[ "$invalid_refresh_response" == *"success\":false"* ]]; then
   success "As expected, refresh was denied with the revoked token"
 else
