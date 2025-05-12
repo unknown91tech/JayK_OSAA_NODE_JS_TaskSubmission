@@ -1,0 +1,306 @@
+
+=======================================================
+      TOKEN MANAGEMENT SYSTEM TEST SCRIPT
+=======================================================
+API URL: http://localhost:3000/api
+Username: testuser
+Telegram ID: 1694779369
+Start Time: Mon, May 12, 2025  9:31:12 AM
+=======================================================
+This script will test all aspects of the token management system.
+You'll need to check your Telegram app for OTP codes during the test.
+=======================================================
+Press ENTER to start the test or CTRL+C to cancel...
+
+============================================================
+STEP 1: Register a new user
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/register
+PAYLOAD:
+{
+  "username": "testuser",
+  "dateOfBirth": "1990-01-01",
+  "passcode": "Secure123!",
+  "registrationMethod": "telegram",
+  "telegramId": "1694779369",
+  "referralCode": "1694779369"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"User registered successfully. Please verify with the OTP sent.","userId":"00ce8e3f-8da2-4daf-8db1-989c382d7441"}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Registration successful. User ID: 00ce8e3f-8da2-4daf-8db1-989c382d7441
+
+============================================================
+STEP 2: Verify OTP for registration
+============================================================
+
+⚠ ATTENTION: Check your Telegram for the OTP code
+Enter the OTP received on Telegram: 289309
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/verify-otp
+PAYLOAD:
+{
+  "userId": "00ce8e3f-8da2-4daf-8db1-989c382d7441",
+  "otp": "289309"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"User verified successfully","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI0ODcsImV4cCI6MTc0NzAyNjA4N30.R-FjoXW3iF4ydzrJnyFvJwpa1EOn789esnGWhojXhIw","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJyZWZyZXNoIiwianRpIjoiN2Y4NjlmNWEtMDQ1Ny00YTM0LThkMjgtZTI0OTVmMjNkZjBkIiwiaWF0IjoxNzQ3MDIyNDg3LCJleHAiOjE3NDc2MjcyODd9.L1G2l385pLu3Owm_1XWj6GyypwjuPpzTl4tsI36cePo","expiresIn":3600,"refreshExpiresIn":604800,"roles":[],"user":{"id":"00ce8e3f-8da2-4daf-8db1-989c382d7441","username":"testuser","registrationMethod":"telegram"}}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: OTP verification successful. Tokens received.
+
+→ Access Token: eyJhbGciOiJIUzI...789esnGWhojXhIw (252 chars)
+
+→ Refresh Token: eyJhbGciOiJIUzI...PpzTl4tsI36cePo (313 chars)
+
+============================================================
+STEP 3: Login with credentials
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/login
+PAYLOAD:
+{
+  "username": "testuser",
+  "passcode": "Secure123!",
+  "loginMethod": "direct"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Please enter the OTP sent to complete login","requireMFA":true,"userId":"00ce8e3f-8da2-4daf-8db1-989c382d7441"}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Login first step successful. MFA required.
+
+============================================================
+STEP 4: Verify MFA for login
+============================================================
+
+⚠ ATTENTION: Check your Telegram for the login OTP code
+Enter the OTP received on Telegram: 704985
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/verify-mfa
+PAYLOAD:
+{
+    "userId": "00ce8e3f-8da2-4daf-8db1-989c382d7441",
+    "otp": "704985"
+  }
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Login successful","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MDIsImV4cCI6MTc0NzAyNjEwMn0.UpHTrGE8NFJdrsvHQSrm3ENsR-_bhgN_XuGuIBpWVfg","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJyZWZyZXNoIiwianRpIjoiOGFiMDNkN2UtMmVkMC00NjQ2LWEwZjgtNTNmMTQyODFjMTQ0IiwiaWF0IjoxNzQ3MDIyNTAyLCJleHAiOjE3NDc2MjczMDJ9.auL1tZcwaMnzfBmSMu0Z1D8rw63lkiUlZPFRWJfZOhs","expiresIn":3600,"refreshExpiresIn":604800,"roles":[],"user":{"id":"00ce8e3f-8da2-4daf-8db1-989c382d7441","username":"testuser","registrationMethod":"telegram"}}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: MFA verification successful. New tokens received.
+
+→ Access Token: eyJhbGciOiJIUzI...hgN_XuGuIBpWVfg (252 chars)
+
+→ Refresh Token: eyJhbGciOiJIUzI...kiUlZPFRWJfZOhs (313 chars)
+
+============================================================
+STEP 5: Use protected endpoint (view sessions)
+============================================================
+
+REQUEST: GET
+ENDPOINT: http://localhost:3000/api/auth/sessions
+PAYLOAD:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MDIsImV4cCI6MTc0NzAyNjEwMn0.UpHTrGE8NFJdrsvHQSrm3ENsR-_bhgN_XuGuIBpWVfg
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"sessions":[{"id":"050b816c-e3c8-45f7-b9f4-be4f05de5e2c","ipAddress":"::1","device":"Desktop","browser":"curl/8.9.0","createdAt":"2025-05-12T04:01:27.785Z","lastUsed":"2025-05-12T04:01:27.784Z"},{"id":"7f94e5a9-947b-4973-92f1-4f3c3b2a494f","ipAddress":"::1","device":"Desktop","browser":"curl/8.9.0","createdAt":"2025-05-12T04:01:42.333Z","lastUsed":"2025-05-12T04:01:44.195Z"}]}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Successfully accessed protected endpoint
+
+→ Found session ID: 050b816c-e3c8-45f7-b9f4-be4f05de5e2c (will be used for session termination)
+
+============================================================
+STEP 6: Refresh token
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/refresh-token
+PAYLOAD:
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJyZWZyZXNoIiwianRpIjoiOGFiMDNkN2UtMmVkMC00NjQ2LWEwZjgtNTNmMTQyODFjMTQ0IiwiaWF0IjoxNzQ3MDIyNTAyLCJleHAiOjE3NDc2MjczMDJ9.auL1tZcwaMnzfBmSMu0Z1D8rw63lkiUlZPFRWJfZOhs"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Token refreshed successfully","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MDYsImV4cCI6MTc0NzAyNjEwNn0.xi9tGVH-0IWyT7T07V2A83WSO-yJOV3cBGljJzfUe7E","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJyZWZyZXNoIiwianRpIjoiMjFkMzM1YmQtYTFlZi00MWY3LWIyNjYtZTA0MmY0MjJkYWYxIiwiaWF0IjoxNzQ3MDIyNTA2LCJleHAiOjE3NDc2MjczMDZ9.pJ-6bPorApEEJlfyInaHmlmKS6vaVj9OqkKIUkrQ5rQ","expiresIn":3600,"refreshExpiresIn":604800,"roles":[],"user":{"id":"00ce8e3f-8da2-4daf-8db1-989c382d7441","username":"testuser","registrationMethod":"telegram"}}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Token refresh successful. New tokens received.
+
+→ Old Access Token: eyJhbGciOiJIUzI...hgN_XuGuIBpWVfg
+
+→ New Access Token: eyJhbGciOiJIUzI...OV3cBGljJzfUe7E
+
+→ Old Refresh Token: eyJhbGciOiJIUzI...kiUlZPFRWJfZOhs
+
+→ New Refresh Token: eyJhbGciOiJIUzI...Vj9OqkKIUkrQ5rQ
+
+============================================================
+STEP 7: Terminate a specific session
+============================================================
+
+REQUEST: DELETE
+ENDPOINT: http://localhost:3000/api/auth/sessions/050b816c-e3c8-45f7-b9f4-be4f05de5e2c
+PAYLOAD:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MDYsImV4cCI6MTc0NzAyNjEwNn0.xi9tGVH-0IWyT7T07V2A83WSO-yJOV3cBGljJzfUe7E
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Session terminated successfully"}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Successfully terminated session 050b816c-e3c8-45f7-b9f4-be4f05de5e2c
+
+============================================================
+STEP 8: Toggle MFA setting
+============================================================
+
+REQUEST: PATCH
+ENDPOINT: http://localhost:3000/api/auth/toggle-mfa
+PAYLOAD:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MDYsImV4cCI6MTc0NzAyNjEwNn0.xi9tGVH-0IWyT7T07V2A83WSO-yJOV3cBGljJzfUe7E
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Multi-factor authentication disabled successfully","mfaEnabled":false}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Successfully toggled MFA setting
+
+→ MFA is now: false
+
+============================================================
+STEP 9: Test Telegram message
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/test-telegram
+PAYLOAD:
+{
+  "telegramId": "1694779369",
+  "message": "This is a test message from the automated script"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Test message sent successfully!"}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Successfully sent test message to Telegram
+
+⚠ ATTENTION: Check your Telegram to confirm you received: 'This is a test message from the automated script'
+
+============================================================
+STEP 10: Logout from current device
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/logout
+PAYLOAD:
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJyZWZyZXNoIiwianRpIjoiMjFkMzM1YmQtYTFlZi00MWY3LWIyNjYtZTA0MmY0MjJkYWYxIiwiaWF0IjoxNzQ3MDIyNTA2LCJleHAiOjE3NDc2MjczMDZ9.pJ-6bPorApEEJlfyInaHmlmKS6vaVj9OqkKIUkrQ5rQ"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Logged out successfully"}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Successfully logged out from current device
+
+============================================================
+STEP 11: Try to access protected endpoint with revoked token
+============================================================
+
+REQUEST: GET
+ENDPOINT: http://localhost:3000/api/auth/sessions
+PAYLOAD:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MDYsImV4cCI6MTc0NzAyNjEwNn0.xi9tGVH-0IWyT7T07V2A83WSO-yJOV3cBGljJzfUe7E
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"sessions":[]}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+⚠ ATTENTION: Unexpected response when using revoked token
+
+============================================================
+STEP 12: Try to refresh with revoked refresh token
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/refresh-token
+PAYLOAD:
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJyZWZyZXNoIiwianRpIjoiMjFkMzM1YmQtYTFlZi00MWY3LWIyNjYtZTA0MmY0MjJkYWYxIiwiaWF0IjoxNzQ3MDIyNTA2LCJleHAiOjE3NDc2MjczMDZ9.pJ-6bPorApEEJlfyInaHmlmKS6vaVj9OqkKIUkrQ5rQ"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":false,"message":"Invalid refresh token"}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: As expected, refresh was denied with the revoked token
+
+→ Error message: Invalid refresh token
+
+============================================================
+STEP 13: Login again to test logout-all
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/login
+PAYLOAD:
+{
+  "username": "testuser",
+  "passcode": "Secure123!",
+  "loginMethod": "direct"
+}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Login successful","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MTgsImV4cCI6MTc0NzAyNjExOH0.siXZndG5m_XISgg6cqOEdkGSeH3-hSI0itlanWQO3c0","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJyZWZyZXNoIiwianRpIjoiMGE5ODc4ZmQtNjRiZS00ZDYwLWI2NWMtMWFmNTkwMmY2ZGFjIiwiaWF0IjoxNzQ3MDIyNTE4LCJleHAiOjE3NDc2MjczMTh9.566kW_oEhRMlnKy2Oeu-0wt9fDpWEZNH86BCoZer6rA","expiresIn":3600,"refreshExpiresIn":604800,"roles":[],"user":{"id":"00ce8e3f-8da2-4daf-8db1-989c382d7441","username":"testuser","registrationMethod":"telegram"}}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Login successful
+
+→ Access token received for logout-all test
+
+============================================================
+STEP 14: Logout from all devices
+============================================================
+
+REQUEST: POST
+ENDPOINT: http://localhost:3000/api/auth/logout-all
+PAYLOAD:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwY2U4ZTNmLThkYTItNGRhZi04ZGIxLTk4OWMzODJkNzQ0MSIsInVzZXJuYW1lIjoidGVzdHVzZXIiLCJyb2xlcyI6W10sInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDcwMjI1MTgsImV4cCI6MTc0NzAyNjExOH0.siXZndG5m_XISgg6cqOEdkGSeH3-hSI0itlanWQO3c0
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+RESPONSE:
+{"success":true,"message":"Successfully logged out from 1 device(s)"}
+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+✓ SUCCESS: Successfully logged out from all devices
+
+→ Response message: Successfully logged out from 1 device(s)
+
+=======================================================
+      TOKEN MANAGEMENT SYSTEM TEST COMPLETED
+=======================================================
+Start Time: Mon, May 12, 2025  9:32:02 AM
+End Time: Mon, May 12, 2025  9:32:03 AM
+
+Test Results Summary:
+✓ User registration
+✓ OTP verification
+✓ User login
+✓ Session management
+✓ Token refresh
+✓ Token revocation
+✓ MFA toggle
+✓ Telegram messaging
+✓ Error handling validation
+=======================================================
+All aspects of the token management system have been tested!

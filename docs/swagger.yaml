@@ -1,0 +1,778 @@
+openapi: 3.0.3
+info:
+  title: Secure Authentication System API
+  description: |
+    A comprehensive authentication system with MFA, RBAC, and security features.
+    
+    ## Features
+    - User registration and authentication
+    - Multi-factor authentication (MFA)
+    - Role-based access control (RBAC)
+    - Session management
+    - Activity logging
+    - Challenge/CAPTCHA system
+    
+    ## Authentication
+    Most endpoints require authentication using JWT tokens. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-token>
+    ```
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@yourcompany.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.yourcompany.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Challenges
+    description: Challenge/CAPTCHA endpoints
+  - name: Roles
+    description: Role management endpoints (Admin only)
+  - name: Logs
+    description: Activity logging endpoints (Admin only)
+  - name: Sessions
+    description: Session management endpoints
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the API is running
+      tags: [System]
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                  version:
+                    type: string
+
+  /api/auth/register:
+    post:
+      summary: Register new user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - dateOfBirth
+                - passcode
+                - registrationMethod
+                - telegramId
+              properties:
+                username:
+                  type: string
+                  pattern: ^[a-zA-Z0-9_-]+$
+                  minLength: 3
+                  maxLength: 30
+                  example: john_doe
+                dateOfBirth:
+                  type: string
+                  format: date
+                  example: '1990-01-01'
+                passcode:
+                  type: string
+                  minLength: 8
+                  pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]
+                  example: SecurePass123!
+                referralCode:
+                  type: string
+                  example: REF123
+                registrationMethod:
+                  type: string
+                  enum: [telegram, whatsapp]
+                  example: telegram
+                telegramId:
+                  type: string
+                  pattern: ^\d+$
+                  example: '123456789'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User registered successfully. Please verify with the OTP sent.
+                  userId:
+                    type: string
+                    format: uuid
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or Telegram ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/verify-otp:
+    post:
+      summary: Verify OTP
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - otp
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                otp:
+                  type: string
+                  pattern: ^\d{6}$
+                  example: '123456'
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User verified successfully
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  expiresIn:
+                    type: integer
+                    example: 3600
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      summary: User login
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - passcode
+              properties:
+                username:
+                  type: string
+                  example: john_doe
+                passcode:
+                  type: string
+                  example: SecurePass123!
+                loginMethod:
+                  type: string
+                  enum: [direct, telegram]
+                  default: direct
+                challengeId:
+                  type: string
+                  format: uuid
+                  description: Required if challenge was requested
+                challengeAnswer:
+                  type: string
+                  description: Answer to the challenge
+      responses:
+        '200':
+          description: Login successful or MFA required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  expiresIn:
+                    type: integer
+                  requireMFA:
+                    type: boolean
+                  userId:
+                    type: string
+                    format: uuid
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many failed attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/verify-mfa:
+    post:
+      summary: Verify MFA code
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - otp
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                otp:
+                  type: string
+                  pattern: ^\d{6}$
+                  example: '123456'
+      responses:
+        '200':
+          description: MFA verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  expiresIn:
+                    type: integer
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/refresh-token:
+    post:
+      summary: Refresh access token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Token refreshed successfully
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  expiresIn:
+                    type: integer
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      summary: Logout user
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logged out successfully
+
+  /api/auth/logout-all:
+    post:
+      summary: Logout from all devices
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out from all devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Successfully logged out from 3 device(s)
+
+  /api/auth/sessions:
+    get:
+      summary: Get user sessions
+      tags: [Sessions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active sessions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+
+  /api/auth/sessions/{sessionId}:
+    delete:
+      summary: Terminate specific session
+      tags: [Sessions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session terminated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Session terminated successfully
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/toggle-mfa:
+    patch:
+      summary: Toggle MFA setting
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: MFA setting updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Multi-factor authentication enabled successfully
+                  mfaEnabled:
+                    type: boolean
+                    example: true
+
+  /api/roles:
+    get:
+      summary: Get all roles
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+    post:
+      summary: Create new role
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  pattern: ^[a-zA-Z_]+$
+                  example: moderator
+                description:
+                  type: string
+                  example: Moderator with limited admin access
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                  example: ['user:read', 'role:read', 'logs:read']
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Role created successfully
+                  role:
+                    $ref: '#/components/schemas/Role'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Role already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/logs/raw/{category}/{date}:
+    get:
+      summary: Get raw log file
+      tags: [Logs]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: category
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-zA-Z]+$
+            example: auth
+        - in: path
+          name: date
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+            example: '2024-01-01'
+      responses:
+        '200':
+          description: Log file retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  fileContent:
+                    type: string
+                  filename:
+                    type: string
+        '404':
+          description: Log file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        registrationMethod:
+          type: string
+          enum: [telegram, whatsapp]
+        isVerified:
+          type: boolean
+        mfaEnabled:
+          type: boolean
+        lastLogin:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ipAddress:
+          type: string
+        device:
+          type: string
+          enum: [Mobile, Desktop, Unknown]
+        browser:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastUsed:
+          type: string
+          format: date-time
+
+    Challenge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [CAPTCHA, MATH_PROBLEM]
+        question:
+          type: string
+        image:
+          type: string
+          description: ASCII art or base64 image
+        expiresAt:
+          type: string
+          format: date-time
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        action:
+          type: string
+        category:
+          type: string
+          enum: [AUTH, MFA, ROLE, ACCESS, SECURITY, SYSTEM]
+        severity:
+          type: string
+          enum: [INFO, WARNING, ALERT, ERROR]
+        details:
+          type: object
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        resourceId:
+          type: string
+        status:
+          type: string
+          enum: [SUCCESS, FAILURE, BLOCKED, ATTEMPTED]
+        hashValue:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Validation failed
+            details:
+              type: object
+              nullable: true
+            timestamp:
+              type: string
+              format: date-time
+
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            error:
+              type: object
+              properties:
+                details:
+                  type: object
+                  properties:
+                    errors:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          field:
+                            type: string
+                          message:
+                            type: string
